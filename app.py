@@ -2,30 +2,115 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# --- Agent Map Data (သင်ပေးထားတဲ့ list ကို Python format ပြောင်းထားတာပါ) ---
+# Dashboard Setting
+st.set_page_config(page_title="Agent Performance AI", layout="wide")
+
+# ၁။ Agent ID & Name List (သင်ပေးထားသော List အားလုံး)
 AGENT_MAP = {
     "301246": "Thae Su Myat Noe", "304558": "Phyo Ko Ko", "305527": "Aye Myat Mon-4",
     "306432": "Ei Pwint Phyu-2", "306564": "Thin Thin Nwe-3", "307381": "Ye Myat Thu",
-    "306098": "Hsu Po Po Aung", "313785": "Kaung Satt" # ... ကျန်တာတွေ အကုန်ထည့်လို့ရပါတယ်
+    "307832": "Hnin Aye Soe", "308059": "Nyo Nyo Tun Lwin", "308086": "Lin Htet Paing",
+    "308489": "Tin Zar Thaw", "308863": "Zun Pwint Phyu", "308915": "San San Aye",
+    "308924": "Yoon Waddy", "309197": "Than Than Sint", "309299": "Toe Hlaing Win-2",
+    "309535": "Myint Myat Thu-2", "309607": "Hnin Oo Wai-3", "309609": "Shun La Pyae",
+    "309700": "Kay Zin Htwe", "306099": "Htet Aung Khant", "306098": "Hsu Po Po Aung",
+    "306023": "Zin Me Me Htun", "306956": "Win Win Aye-2", "310387": "Kyawt Shwe Yee Win",
+    "310478": "Chit Su San", "310557": "Aung Si Phyo", "310822": "Hein Htet Aung-46",
+    "310917": "Zon Thaw Tar Htet", "310968": "Wai Yan Htet-10", "310963": "Mya Sint Chal",
+    "310965": "Hnin Wutt Yee-2", "311013": "Lin Htein", "311159": "Aye Nyein Nyein Moe",
+    "311464": "Eingyin Khaing-2", "311465": "Hnin Nadi Nway", "311493": "Yu Thandi Moe",
+    "311569": "Nay Chi Win Lae", "311691": "Hay Mar Hnin Oo", "303220": "Tin Myo Swe Zin Tun",
+    "311951": "Htet Htet Htun-3", "311952": "Thiri Yadanar-2", "312184": "Kay Zin Thet",
+    "312208": "Yati Phone Myat", "312270": "Kyaw Min Khant-8", "312271": "Nway Htwe Aung",
+    "312272": "Synmi Mi Aung", "312273": "Kay Kay", "312274": "Nyo Mya Htet",
+    "312275": "Ye Min Myat-4", "312377": "Thiha Aung-17", "312378": "Pyae Pyae Zaw",
+    "312387": "Zar Ni Phyo", "312388": "Cangmah Ramthang", "312389": "Lin Khaine Kyaw",
+    "312400": "Naing Aung Moe-2", "312485": "Htet Htet Aung-11", "312486": "Si Thu Htun-7",
+    "312558": "Sandar Win-5", "312559": "Hein Htet Myat", "312560": "Myo Theint Theint Ei",
+    "312572": "Pyae Sone Thar", "312573": "Thida Khaing-3", "312579": "Shine Nyi Nyi-2",
+    "312597": "Antt Thaw Zin", "312651": "Thiri Moe", "312652": "Han Zar Zar Maw",
+    "312734": "Nyan Sin Htet", "312735": "Theint May Thu", "310080": "Htet Wai Phyo",
+    "312892": "May Moe", "312899": "Sai Wai Yan Htun", "312900": "Saw Nandar Hlaing",
+    "313015": "Myint Moe Aung", "313059": "Si Thu Aung-20", "313061": "May Myint Mo",
+    "313143": "Saw Htet Lin", "313264": "Thu Zar Htet-2", "313318": "Oakkar Oo",
+    "313078": "Nyan Lin Htet-10", "313360": "Oakkar Oo-2", "313407": "Lu Maw Hein",
+    "313463": "Ei Thet Mon-2", "313464": "Ei Thazin Phyu", "313519": "Htun Zar Ni Kyaw",
+    "313581": "Kyaw Moe Aung-2", "313602": "Thet Lone Pone-2", "313603": "May Thu Htun-5",
+    "313604": "Thet Hmue Khin", "313646": "Htoo Peti Lwin", "313647": "Hla Moe",
+    "313648": "Phyoe Zin Oo", "313649": "Nwe Ni Soe", "313655": "Aung Sip Paing",
+    "313670": "Thin Pwint San", "313674": "Lai Hnin Hlaing", "313675": "Htay Htay Aung-2",
+    "313676": "Htun Ka Htaty", "313677": "Thin Thi Han", "313784": "Min Khant Kyaw-22",
+    "313785": "Kaung Satt"
 }
 
-# (အပေါ်က list အရှည်ကြီးကို code ထဲမှာ အစုံပြန်ထည့်ပေးပါမယ်)
+# ၂။ Password System
+def check_password():
+    if "password_correct" not in st.session_state:
+        st.session_state.password_correct = False
+    if st.session_state.password_correct:
+        return True
+    
+    st.markdown("<h1 style='text-align: center;'>🔐 Secure Login</h1>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1,2,1])
+    with col2:
+        password = st.text_input("Please enter your password", type="password")
+        if st.button("Access Dashboard"):
+            if password == "12345":
+                st.session_state.password_correct = True
+                st.rerun()
+            else:
+                st.error("❌ Invalid Password!")
+    return False
 
-st.set_page_config(page_title="Agent Analysis", layout="wide")
-
-# ... (Password System အပိုင်း အရင်အတိုင်းထားပါ) ...
-
+# ၃။ Main Dashboard Logic
 if check_password():
-    st.title("📊 Agent Pause Time Dashboard")
-    uploaded_file = st.sidebar.file_uploader("Upload CSV/Excel", type=["csv", "xlsx"])
+    st.markdown("<h1 style='text-align: center; color: #1E88E5;'>📊 Agent Performance Analytics</h1>", unsafe_allow_html=True)
+    st.markdown("---")
 
-    if uploaded_file:
-        df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith('.csv') else pd.read_excel(uploaded_file)
+    st.sidebar.header("📂 Data Upload")
+    uploaded_file = st.sidebar.file_uploader("Upload your CSV file", type=["csv"])
+
+    if uploaded_file is not None:
+        df = pd.read_csv(uploaded_file)
         
-        # ID ကနေ Name ပြောင်းပေးတဲ့ အပိုင်း
+        # Agent ID ကို နာမည်အဖြစ် ပြောင်းလဲခြင်း
         if 'Agent ID' in df.columns:
-            df['Agent Name'] = df['Agent ID'].astype(str).map(AGENT_MAP).fillna("Unknown Agent")
+            df['Agent Name'] = df['Agent ID'].astype(str).map(AGENT_MAP).fillna("Unknown ID")
         
-        st.success("Data Processing အောင်မြင်ပါတယ်!")
+        st.subheader("📌 Quick Summary")
+        m1, m2, m3 = st.columns(3)
         
-        # Dashboard Charts တွေ ဆက်ပြမယ်...
+        pause_col = "Pause Time" if "Pause Time" in df.columns else df.columns[1]
+        
+        total_pause = df[pause_col].sum() if pd.api.types.is_numeric_dtype(df[pause_col]) else 0
+        avg_pause = df[pause_col].mean() if pd.api.types.is_numeric_dtype(df[pause_col]) else 0
+        
+        m1.metric("Total Pause Time", f"{total_pause:,.0f} min")
+        m2.metric("Average Pause", f"{avg_pause:.2f} min")
+        m3.metric("Total Agents", len(df))
+
+        st.divider()
+
+        tab1, tab2 = st.tabs(["📈 Visualization", "📋 Data Table"])
+
+        with tab1:
+            col_left, col_right = st.columns(2)
+            
+            # Agent Name ပါရင် အဲဒါကိုသုံး၊ မပါရင် ID ကိုသုံး
+            name_col = 'Agent Name' if 'Agent Name' in df.columns else df.columns[0]
+            
+            with col_left:
+                st.markdown("### 📊 Agent Comparison")
+                fig_bar = px.bar(df, x=name_col, y=pause_col, color=name_col, template="plotly_dark")
+                st.plotly_chart(fig_bar, use_container_width=True)
+
+            with col_right:
+                st.markdown("### 🍕 Distribution")
+                fig_pie = px.pie(df, names=name_col, values=pause_col, hole=0.4, template="plotly_dark")
+                st.plotly_chart(fig_pie, use_container_width=True)
+
+        with tab2:
+            st.dataframe(df, use_container_width=True)
+            
+    else:
+        st.info("👋 Welcome! Please upload your CSV file in the sidebar to start.")
