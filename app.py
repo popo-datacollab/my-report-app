@@ -42,12 +42,11 @@ AGENT_MAP = {
     "313677": "Thin Thi Han", "313784": "Min Khant Kyaw-22", "313785": "Kaung Satt"
 }
 
-# 3. Password Authentication
+# 3. Password Check
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
 if not st.session_state.logged_in:
-    # ပြောင်းလဲလိုက်သော ခေါင်းစဉ်
     st.title("🔐 Po Po Dashboard")
     pwd = st.text_input("Enter Password", type="password")
     if st.button("Login"):
@@ -59,39 +58,33 @@ if not st.session_state.logged_in:
 else:
     # 4. Main Dashboard
     st.title("📊 Po Po Dashboard Summary")
-    
     file = st.file_uploader("Upload CSV File", type=["csv"])
     
     if file:
         df = pd.read_csv(file)
         
-        # ID to Name Mapping
-        if 'Agent ID' in df.columns:
-            df['Agent Name'] = df['Agent ID'].astype(str).map(AGENT_MAP).fillna("Unknown ID")
-        
-        # Select Target Columns
-        display_cols = []
-        if 'Agent Name' in df.columns: display_cols.append('Agent Name')
-        if 'Pause Time' in df.columns: display_cols.append('Pause Time')
-        
-        final_df = df[display_cols]
+        # --- Auto Column Matcher ---
+        # Agent ID ပါတဲ့ column ကို ရှာမယ်
+        id_col = next((c for c in df.columns if 'id' in c.lower()), None)
+        # Pause Time ပါတဲ့ column ကို ရှာမယ်
+        pause_col = next((c for c in df.columns if 'pause' in c.lower()), None)
 
-        # 5. Data Visualization
-        if 'Pause Time' in final_df.columns:
+        if id_col and pause_col:
+            # Map Name
+            df['Agent Name'] = df[id_col].astype(str).map(AGENT_MAP).fillna("Unknown ID")
+            
+            # Chart
             st.subheader("Performance Chart")
-            fig = px.bar(final_df, x='Agent Name', y='Pause Time', 
-                         color='Agent Name', text_auto=True,
-                         template="plotly_white")
+            fig = px.bar(df, x='Agent Name', y=pause_col, color='Agent Name', text_auto=True)
             st.plotly_chart(fig, use_container_width=True)
             
-            # Summary Metrics
-            total_time = final_df['Pause Time'].sum()
-            st.info(f"Total Combined Pause Time: **{total_time}** Minutes")
-
-        st.divider()
-        
-        # 6. Data Table
-        st.subheader("📋 Detailed Summary Table")
-        st.dataframe(final_df, use_container_width=True)
-    else:
-        st.warning("Please upload a CSV file to generate the report.")
+            # Summary
+            total = df[pause_col].sum()
+            st.info(f"Total Combined Pause Time: **{total}** Minutes")
+            
+            # Table
+            st.subheader("📋 Detailed Summary Table")
+            st.dataframe(df[['Agent Name', pause_col]], use_container_width=True)
+        else:
+            st.error(f"Error: Could not find required columns. Found: {list(df.columns)}")
+            st.warning("Please make sure your CSV has 'Agent ID' and 'Pause Time' columns.")
