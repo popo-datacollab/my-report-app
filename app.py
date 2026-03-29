@@ -48,7 +48,16 @@ if check_password():
             x_axis = st.selectbox("X-axis (ဥပမာ - Agent Name)", columns)
             y_axis = st.selectbox("Y-axis (ဥပမာ - Pause Time)", columns)
             fig_bar = px.bar(df, x=x_axis, y=y_axis, color=x_axis, title="Agent Comparison")
-            st.plotly_chart(fig_bar, use_container_width=True)
+            st.plotly_chart(fig_bar, chart_type = st.radio("Chart အမျိုးအစား ရွေးပါ", ["Bar", "Line", "Area"])
+
+if chart_type == "Bar":
+    fig = px.bar(df, x=x_axis, y=y_axis, color=x_axis)
+elif chart_type == "Line":
+    fig = px.line(df, x=x_axis, y=y_axis)
+else:
+    fig = px.area(df, x=x_axis, y=y_axis)
+
+st.plotly_chart(fig, use_container_width=True)
 
         with col2:
             st.subheader("Data Distribution (Pie)")
