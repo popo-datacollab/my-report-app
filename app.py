@@ -20,47 +20,60 @@ if not st.session_state.logged_in:
             st.error("❌ Incorrect Password!")
 else:
     # 3. Main Dashboard Content
-    st.title("📊 Po Po Dashboard Summary")
+    st.title("📊 Po Po Dashboard - Advanced Analytics")
     
-    # File Uploader
-    uploaded_file = st.file_uploader("Upload CSV File", type=["csv"])
+    # Sidebar for Settings
+    st.sidebar.header("Settings")
+    uploaded_file = st.sidebar.file_uploader("Upload CSV File", type=["csv"])
     
     if uploaded_file:
-        # Read CSV
         df = pd.read_csv(uploaded_file)
         
-        # Displaying the raw data table
-        st.subheader("📋 Uploaded Data Table")
+        # UI Layout: Metrics at the top
+        if len(df.columns) >= 2:
+            name_col = df.columns[0]
+            val_col = df.columns[1]
+            
+            if pd.api.types.is_numeric_dtype(df[val_col]):
+                col1, col2, col3 = st.columns(3)
+                col1.metric("Total Agents", len(df))
+                col2.metric(f"Total {val_col}", f"{df[val_col].sum():,.0f}")
+                col3.metric(f"Average {val_col}", f"{df[val_col].mean():,.2f}")
+
+            st.divider()
+
+            # Chart Selection Sidebar
+            st.sidebar.subheader("Visualization Options")
+            chart_type = st.sidebar.selectbox(
+                "Select Chart Type",
+                ["Bar Chart", "Pie Chart", "Line Chart", "Area Chart", "Scatter Plot"]
+            )
+
+            # 4. Multi-Chart Generation
+            st.subheader(f"📈 {chart_type} Visualization")
+            
+            if chart_type == "Bar Chart":
+                fig = px.bar(df, x=name_col, y=val_col, color=name_col, text_auto=True, template="plotly_white")
+            
+            elif chart_type == "Pie Chart":
+                fig = px.pie(df, names=name_col, values=val_col, hole=0.4, template="plotly_white")
+            
+            elif chart_type == "Line Chart":
+                fig = px.line(df, x=name_col, y=val_col, markers=True, template="plotly_white")
+            
+            elif chart_type == "Area Chart":
+                fig = px.area(df, x=name_col, y=val_col, template="plotly_white")
+            
+            elif chart_type == "Scatter Plot":
+                fig = px.scatter(df, x=name_col, y=val_col, size=val_col, color=name_col, template="plotly_white")
+
+            st.plotly_chart(fig, use_container_width=True)
+
+        st.divider()
+        
+        # 5. Data Table with Search
+        st.subheader("📋 Detailed Data Table")
         st.dataframe(df, use_container_width=True)
         
-        st.divider()
-
-        # 4. Automatic Chart Generation
-        # Uses the 1st column for Names (X) and 2nd column for Values (Y)
-        if len(df.columns) >= 2:
-            st.subheader("📈 Performance Chart")
-            
-            x_axis = df.columns[0] 
-            y_axis = df.columns[1] 
-            
-            fig = px.bar(
-                df, 
-                x=x_axis, 
-                y=y_axis, 
-                color=x_axis,
-                text_auto=True,
-                title=f"{y_axis} by {x_axis}",
-                template="plotly_white"
-            )
-            
-            st.plotly_chart(fig, use_container_width=True)
-            
-            # Summary Calculation
-            if pd.api.types.is_numeric_dtype(df[y_axis]):
-                total_val = df[y_axis].sum()
-                st.info(f"Total {y_axis}: **{total_val}**")
-        else:
-            st.warning("The CSV file needs at least 2 columns to create a chart.")
-            
     else:
-        st.info("Please upload a CSV file to generate the report.")
+        st.info("Please upload a CSV file from the sidebar to start visualization.")
