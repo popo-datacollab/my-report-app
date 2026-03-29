@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 
 # 1. Dashboard Configuration
-st.set_page_config(page_title="Agent Performance Dashboard", layout="wide")
+st.set_page_config(page_title="Po Po Dashboard", layout="wide")
 
 # 2. Agent ID & Name Mapping
 AGENT_MAP = {
@@ -47,7 +47,8 @@ if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
 if not st.session_state.logged_in:
-    st.title("🔐 Agent Dashboard Login")
+    # ပြောင်းလဲလိုက်သော ခေါင်းစဉ်
+    st.title("🔐 Po Po Dashboard")
     pwd = st.text_input("Enter Password", type="password")
     if st.button("Login"):
         if pwd == "12345":
@@ -57,7 +58,7 @@ if not st.session_state.logged_in:
             st.error("❌ Incorrect Password!")
 else:
     # 4. Main Dashboard
-    st.title("📊 Agent Pause Time Summary")
+    st.title("📊 Po Po Dashboard Summary")
     
     file = st.file_uploader("Upload CSV File", type=["csv"])
     
