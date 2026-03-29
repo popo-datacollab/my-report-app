@@ -2,10 +2,10 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# 1. Dashboard Configuration
+# 1. Page Config
 st.set_page_config(page_title="Po Po Dashboard", layout="wide")
 
-# 2. Login System
+# 2. Simplified Login Logic (Error ကင်းအောင် အသစ်ပြန်ရေးထားပါတယ်)
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
@@ -19,61 +19,52 @@ if not st.session_state.logged_in:
         else:
             st.error("❌ Incorrect Password!")
 else:
-    # 3. Main Dashboard Content
-    st.title("📊 Po Po Dashboard - Advanced Analytics")
+    # 3. Main Dashboard
+    st.title("📊 Po Po Dashboard - All-in-One Analytics")
     
-    # Sidebar for Settings
-    st.sidebar.header("Settings")
-    uploaded_file = st.sidebar.file_uploader("Upload CSV File", type=["csv"])
+    st.sidebar.header("Data Source")
+    file = st.sidebar.file_uploader("Upload CSV File", type=["csv"])
     
-    if uploaded_file:
-        df = pd.read_csv(uploaded_file)
+    if file:
+        df = pd.read_csv(file)
         
-        # UI Layout: Metrics at the top
-        if len(df.columns) >= 2:
-            name_col = df.columns[0]
-            val_col = df.columns[1]
+        # ကိန်းဂဏန်းပါတဲ့ Column နဲ့ စာသားပါတဲ့ Column ကို ခွဲထုတ်ခြင်း
+        num_cols = df.select_dtypes(include=['number']).columns.tolist()
+        text_cols = df.select_dtypes(include=['object']).columns.tolist()
+
+        if len(num_cols) > 0 and len(text_cols) > 0:
+            # User စိတ်ကြိုက် Column ရွေးနိုင်အောင် လုပ်ပေးထားခြင်း
+            st.sidebar.subheader("Chart Settings")
+            x_axis = st.sidebar.selectbox("Select Agent/Category Name", text_cols)
+            y_axis = st.sidebar.selectbox("Select Value/Pause Time", num_cols)
             
-            if pd.api.types.is_numeric_dtype(df[val_col]):
-                col1, col2, col3 = st.columns(3)
-                col1.metric("Total Agents", len(df))
-                col2.metric(f"Total {val_col}", f"{df[val_col].sum():,.0f}")
-                col3.metric(f"Average {val_col}", f"{df[val_col].mean():,.2f}")
+            chart_type = st.sidebar.radio("Select Chart Style", ["Bar", "Pie", "Line", "Area"])
 
             st.divider()
 
-            # Chart Selection Sidebar
-            st.sidebar.subheader("Visualization Options")
-            chart_type = st.sidebar.selectbox(
-                "Select Chart Type",
-                ["Bar Chart", "Pie Chart", "Line Chart", "Area Chart", "Scatter Plot"]
-            )
-
-            # 4. Multi-Chart Generation
-            st.subheader(f"📈 {chart_type} Visualization")
+            # 4. Visualization Section
+            st.subheader(f"📈 {chart_type} Chart: {y_axis} vs {x_axis}")
             
-            if chart_type == "Bar Chart":
-                fig = px.bar(df, x=name_col, y=val_col, color=name_col, text_auto=True, template="plotly_white")
-            
-            elif chart_type == "Pie Chart":
-                fig = px.pie(df, names=name_col, values=val_col, hole=0.4, template="plotly_white")
-            
-            elif chart_type == "Line Chart":
-                fig = px.line(df, x=name_col, y=val_col, markers=True, template="plotly_white")
-            
-            elif chart_type == "Area Chart":
-                fig = px.area(df, x=name_col, y=val_col, template="plotly_white")
-            
-            elif chart_type == "Scatter Plot":
-                fig = px.scatter(df, x=name_col, y=val_col, size=val_col, color=name_col, template="plotly_white")
+            if chart_type == "Bar":
+                fig = px.bar(df, x=x_axis, y=y_axis, color=x_axis, text_auto=True)
+            elif chart_type == "Pie":
+                fig = px.pie(df, names=x_axis, values=y_axis, hole=0.4)
+            elif chart_type == "Line":
+                fig = px.line(df, x=x_axis, y=y_axis, markers=True)
+            elif chart_type == "Area":
+                fig = px.area(df, x=x_axis, y=y_axis)
 
             st.plotly_chart(fig, use_container_width=True)
 
+            # Metrics
+            c1, c2 = st.columns(2)
+            c1.metric("Total Rows", len(df))
+            c2.metric(f"Total {y_axis}", f"{df[y_axis].sum():,.0f}")
+        else:
+            st.warning("Your CSV must have at least one column with numbers (e.g., Pause Time) and one with text (e.g., Agent Name).")
+
         st.divider()
-        
-        # 5. Data Table with Search
-        st.subheader("📋 Detailed Data Table")
+        st.subheader("📋 Raw Data Table")
         st.dataframe(df, use_container_width=True)
-        
     else:
-        st.info("Please upload a CSV file from the sidebar to start visualization.")
+        st.info("Please upload a CSV file to start.")
