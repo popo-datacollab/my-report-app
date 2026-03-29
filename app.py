@@ -2,10 +2,10 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# Dashboard Setting
+# --- Dashboard Setting ---
 st.set_page_config(page_title="Agent Performance AI", layout="wide")
 
-# ၁။ Agent ID & Name List (သင်ပေးထားသော List အားလုံး)
+# ၁။ Agent ID & Name Mapping (သင်ပေးထားသော List အားလုံး)
 AGENT_MAP = {
     "301246": "Thae Su Myat Noe", "304558": "Phyo Ko Ko", "305527": "Aye Myat Mon-4",
     "306432": "Ei Pwint Phyu-2", "306564": "Thin Thin Nwe-3", "307381": "Ye Myat Thu",
@@ -43,10 +43,11 @@ AGENT_MAP = {
     "313785": "Kaung Satt"
 }
 
-# ၂။ Password System
+# ၂။ Password Function
 def check_password():
     if "password_correct" not in st.session_state:
         st.session_state.password_correct = False
+    
     if st.session_state.password_correct:
         return True
     
@@ -55,11 +56,11 @@ def check_password():
     with col2:
         password = st.text_input("Please enter your password", type="password")
         if st.button("Access Dashboard"):
-            if password == "12345":
+            if password == "popoaung#99999999":
                 st.session_state.password_correct = True
                 st.rerun()
             else:
-                st.error("❌ Invalid Password!")
+                st.error("❌ Password မှားနေပါတယ်။")
     return False
 
 # ၃။ Main Dashboard Logic
@@ -73,13 +74,14 @@ if check_password():
     if uploaded_file is not None:
         df = pd.read_csv(uploaded_file)
         
-        # Agent ID ကို နာမည်အဖြစ် ပြောင်းလဲခြင်း
+        # Agent ID ကို Agent Name အဖြစ် အလိုအလျောက် ပြောင်းလဲခြင်း
         if 'Agent ID' in df.columns:
             df['Agent Name'] = df['Agent ID'].astype(str).map(AGENT_MAP).fillna("Unknown ID")
         
         st.subheader("📌 Quick Summary")
         m1, m2, m3 = st.columns(3)
         
+        # CSV ထဲက Column Name အပေါ်မူတည်ပြီး တွက်ချက်ခြင်း
         pause_col = "Pause Time" if "Pause Time" in df.columns else df.columns[1]
         
         total_pause = df[pause_col].sum() if pd.api.types.is_numeric_dtype(df[pause_col]) else 0
@@ -87,7 +89,7 @@ if check_password():
         
         m1.metric("Total Pause Time", f"{total_pause:,.0f} min")
         m2.metric("Average Pause", f"{avg_pause:.2f} min")
-        m3.metric("Total Agents", len(df))
+        m3.metric("Total Records", len(df))
 
         st.divider()
 
@@ -95,8 +97,6 @@ if check_password():
 
         with tab1:
             col_left, col_right = st.columns(2)
-            
-            # Agent Name ပါရင် အဲဒါကိုသုံး၊ မပါရင် ID ကိုသုံး
             name_col = 'Agent Name' if 'Agent Name' in df.columns else df.columns[0]
             
             with col_left:
@@ -111,6 +111,5 @@ if check_password():
 
         with tab2:
             st.dataframe(df, use_container_width=True)
-            
     else:
         st.info("👋 Welcome! Please upload your CSV file in the sidebar to start.")
