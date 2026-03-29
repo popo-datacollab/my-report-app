@@ -2,10 +2,10 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# --- Dashboard Setting ---
-st.set_page_config(page_title="Agent Performance AI", layout="wide")
+# ၁။ Dashboard အပြင်အဆင်
+st.set_page_config(page_title="Agent Pause Time Report", layout="wide")
 
-# ၁။ Agent ID & Name Mapping (သင်ပေးထားသော List အားလုံး)
+# ၂။ Agent ID & Name Mapping List
 AGENT_MAP = {
     "301246": "Thae Su Myat Noe", "304558": "Phyo Ko Ko", "305527": "Aye Myat Mon-4",
     "306432": "Ei Pwint Phyu-2", "306564": "Thin Thin Nwe-3", "307381": "Ye Myat Thu",
@@ -43,73 +43,56 @@ AGENT_MAP = {
     "313785": "Kaung Satt"
 }
 
-# ၂။ Password Function
-def check_password():
-    if "password_correct" not in st.session_state:
-        st.session_state.password_correct = False
+# ၃။ Password စနစ်
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+if not st.session_state.logged_in:
+    st.title("🔐 Agent Dashboard Login")
+    pwd = st.text_input("Password ရိုက်ထည့်ပါ", type="password")
+    if st.button("Access"):
+        if pwd == "12345":
+            st.session_state.logged_in = True
+            st.rerun()
+        else:
+            st.error("❌ Password မှားနေပါတယ်။")
+else:
+    # ၄။ ပင်မ Dashboard အပိုင်း
+    st.title("📊 Agent Pause Time Summary")
     
-    if st.session_state.password_correct:
-        return True
+    file = st.file_uploader("CSV ဖိုင်တင်ရန် (Upload)", type=["csv"])
     
-    st.markdown("<h1 style='text-align: center;'>🔐 Secure Login</h1>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([1,2,1])
-    with col2:
-        password = st.text_input("Please enter your password", type="password")
-        if st.button("Access Dashboard"):
-            if password == "popoaung#99999999":
-                st.session_state.password_correct = True
-                st.rerun()
-            else:
-                st.error("❌ Password မှားနေပါတယ်။")
-    return False
-
-# ၃။ Main Dashboard Logic
-if check_password():
-    st.markdown("<h1 style='text-align: center; color: #1E88E5;'>📊 Agent Performance Analytics</h1>", unsafe_allow_html=True)
-    st.markdown("---")
-
-    st.sidebar.header("📂 Data Upload")
-    uploaded_file = st.sidebar.file_uploader("Upload your CSV file", type=["csv"])
-
-    if uploaded_file is not None:
-        df = pd.read_csv(uploaded_file)
+    if file:
+        df = pd.read_csv(file)
         
-        # Agent ID ကို Agent Name အဖြစ် အလိုအလျောက် ပြောင်းလဲခြင်း
+        # Agent ID ကို Agent Name အဖြစ် ပြောင်းလဲပေးခြင်း
         if 'Agent ID' in df.columns:
             df['Agent Name'] = df['Agent ID'].astype(str).map(AGENT_MAP).fillna("Unknown ID")
         
-        st.subheader("📌 Quick Summary")
-        m1, m2, m3 = st.columns(3)
+        # လိုချင်တဲ့ Column နှစ်ခုပဲ ရွေးထုတ်ခြင်း
+        cols_to_show = []
+        if 'Agent Name' in df.columns: cols_to_show.append('Agent Name')
+        if 'Pause Time' in df.columns: cols_to_show.append('Pause Time')
         
-        # CSV ထဲက Column Name အပေါ်မူတည်ပြီး တွက်ချက်ခြင်း
-        pause_col = "Pause Time" if "Pause Time" in df.columns else df.columns[1]
-        
-        total_pause = df[pause_col].sum() if pd.api.types.is_numeric_dtype(df[pause_col]) else 0
-        avg_pause = df[pause_col].mean() if pd.api.types.is_numeric_dtype(df[pause_col]) else 0
-        
-        m1.metric("Total Pause Time", f"{total_pause:,.0f} min")
-        m2.metric("Average Pause", f"{avg_pause:.2f} min")
-        m3.metric("Total Records", len(df))
+        # အချက်အလက်များကို ဇယားထုတ်ခြင်း
+        final_df = df[cols_to_show]
+
+        # ၅။ Chart ပြသခြင်း
+        if 'Pause Time' in final_df.columns:
+            st.subheader("Chart View")
+            fig = px.bar(final_df, x='Agent Name', y='Pause Time', 
+                         color='Agent Name', text_auto=True,
+                         title="Pause Time (Minutes) per Agent")
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # စုစုပေါင်း Pause Time ကို တွက်ပြခြင်း
+            total_time = final_df['Pause Time'].sum()
+            st.success(f"စုစုပေါင်း Pause Time အားလုံး: **{total_time}** မိနစ်")
 
         st.divider()
-
-        tab1, tab2 = st.tabs(["📈 Visualization", "📋 Data Table"])
-
-        with tab1:
-            col_left, col_right = st.columns(2)
-            name_col = 'Agent Name' if 'Agent Name' in df.columns else df.columns[0]
-            
-            with col_left:
-                st.markdown("### 📊 Agent Comparison")
-                fig_bar = px.bar(df, x=name_col, y=pause_col, color=name_col, template="plotly_dark")
-                st.plotly_chart(fig_bar, use_container_width=True)
-
-            with col_right:
-                st.markdown("### 🍕 Distribution")
-                fig_pie = px.pie(df, names=name_col, values=pause_col, hole=0.4, template="plotly_dark")
-                st.plotly_chart(fig_pie, use_container_width=True)
-
-        with tab2:
-            st.dataframe(df, use_container_width=True)
+        
+        # ၆။ ဇယားကွက် (Table) အနေဖြင့်ပြခြင်း
+        st.subheader("📋 Data Table")
+        st.dataframe(final_df, use_container_width=True)
     else:
-        st.info("👋 Welcome! Please upload your CSV file in the sidebar to start.")
+        st.info("👋 CSV ဖိုင်လေး အရင်တင်ပေးပါခင်ဗျာ။")
