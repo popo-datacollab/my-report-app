@@ -2,10 +2,10 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# ၁။ Dashboard Setting
-st.set_page_config(page_title="Agent Pause Time Report", layout="wide")
+# 1. Dashboard Configuration
+st.set_page_config(page_title="Agent Performance Dashboard", layout="wide")
 
-# ၂။ Agent ID & Name Mapping (သင်ပေးထားသော List အားလုံး)
+# 2. Agent ID & Name Mapping
 AGENT_MAP = {
     "301246": "Thae Su Myat Noe", "304558": "Phyo Ko Ko", "305527": "Aye Myat Mon-4",
     "306432": "Ei Pwint Phyu-2", "306564": "Thin Thin Nwe-3", "307381": "Ye Myat Thu",
@@ -20,12 +20,12 @@ AGENT_MAP = {
     "310965": "Hnin Wutt Yee-2", "311013": "Lin Htein", "311159": "Aye Nyein Nyein Moe",
     "311464": "Eingyin Khaing-2", "311465": "Hnin Nadi Nway", "311493": "Yu Thandi Moe",
     "311569": "Nay Chi Win Lae", "311691": "Hay Mar Hnin Oo", "303220": "Tin Myo Swe Zin Tun",
-    "311951": "Htet Htet Htun-3", "311952": "Thiri Yadanar-2", "312184": "Kay Zin Thet",
+    "311951": "Htet Htun-3", "311952": "Thiri Yadanar-2", "312184": "Kay Zin Thet",
     "312208": "Yati Phone Myat", "312270": "Kyaw Min Khant-8", "312271": "Nway Htwe Aung",
     "312272": "Synmi Mi Aung", "312273": "Kay Kay", "312274": "Nyo Mya Htet",
     "312275": "Ye Min Myat-4", "312377": "Thiha Aung-17", "312378": "Pyae Pyae Zaw",
     "312387": "Zar Ni Phyo", "312388": "Cangmah Ramthang", "312389": "Lin Khaine Kyaw",
-    "312400": "Naing Aung Moe-2", "312485": "Htet Htet Aung-11", "312486": "Si Thu Htun-7",
+    "312400": "Naing Aung Moe-2", "312485": "Htet Aung-11", "312486": "Si Thu Htun-7",
     "312558": "Sandar Win-5", "312559": "Hein Htet Myat", "312560": "Myo Theint Theint Ei",
     "312572": "Pyae Sone Thar", "312573": "Thida Khaing-3", "312579": "Shine Nyi Nyi-2",
     "312597": "Antt Thaw Zin", "312651": "Thiri Moe", "312652": "Han Zar Zar Maw",
@@ -42,54 +42,55 @@ AGENT_MAP = {
     "313677": "Thin Thi Han", "313784": "Min Khant Kyaw-22", "313785": "Kaung Satt"
 }
 
-# ၃။ Password System
+# 3. Password Authentication
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
 if not st.session_state.logged_in:
     st.title("🔐 Agent Dashboard Login")
-    pwd = st.text_input("Password ရိုက်ထည့်ပါ", type="password")
-    if st.button("ဝင်မည်"):
+    pwd = st.text_input("Enter Password", type="password")
+    if st.button("Login"):
         if pwd == "12345":
             st.session_state.logged_in = True
             st.rerun()
         else:
-            st.error("❌ Password မှားနေပါတယ်")
+            st.error("❌ Incorrect Password!")
 else:
-    # ၄။ Main Dashboard
+    # 4. Main Dashboard
     st.title("📊 Agent Pause Time Summary")
     
-    file = st.file_uploader("CSV ဖိုင်တင်ပါ", type=["csv"])
+    file = st.file_uploader("Upload CSV File", type=["csv"])
     
     if file:
         df = pd.read_csv(file)
         
-        # ID ကို နာမည်ပြောင်းခြင်း
+        # ID to Name Mapping
         if 'Agent ID' in df.columns:
-            df['Agent Name'] = df['Agent ID'].astype(str).map(AGENT_MAP).fillna("Unknown")
+            df['Agent Name'] = df['Agent ID'].astype(str).map(AGENT_MAP).fillna("Unknown ID")
         
-        # Agent Name နဲ့ Pause Time ကိုပဲ သီးသန့်ထုတ်ခြင်း
+        # Select Target Columns
         display_cols = []
         if 'Agent Name' in df.columns: display_cols.append('Agent Name')
         if 'Pause Time' in df.columns: display_cols.append('Pause Time')
         
         final_df = df[display_cols]
 
-        # ၅။ Chart ပြသခြင်း
+        # 5. Data Visualization
         if 'Pause Time' in final_df.columns:
-            st.subheader("Chart View")
-            # Agent Name နဲ့ Pause Time ကိုပဲ သုံးထားပါတယ်
+            st.subheader("Performance Chart")
             fig = px.bar(final_df, x='Agent Name', y='Pause Time', 
-                         color='Agent Name', text_auto=True)
+                         color='Agent Name', text_auto=True,
+                         template="plotly_white")
             st.plotly_chart(fig, use_container_width=True)
             
+            # Summary Metrics
             total_time = final_df['Pause Time'].sum()
-            st.success(f"စုစုပေါင်း Pause Time အားလုံး: **{total_time}** မိနစ်")
+            st.info(f"Total Combined Pause Time: **{total_time}** Minutes")
 
         st.divider()
         
-        # ၆။ Data Table
-        st.subheader("📋 Summary Table")
+        # 6. Data Table
+        st.subheader("📋 Detailed Summary Table")
         st.dataframe(final_df, use_container_width=True)
     else:
-        st.info("👋 CSV ဖိုင်တင်ပေးဖို့ စောင့်နေပါတယ်ဗျ။")
+        st.warning("Please upload a CSV file to generate the report.")
