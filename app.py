@@ -2,10 +2,10 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-# ၁။ Dashboard အပြင်အဆင်
+# ၁။ Dashboard Setting
 st.set_page_config(page_title="Agent Pause Time Report", layout="wide")
 
-# ၂။ Agent ID & Name Mapping List
+# ၂။ Agent ID & Name Mapping (သင်ပေးထားသော List အားလုံး)
 AGENT_MAP = {
     "301246": "Thae Su Myat Noe", "304558": "Phyo Ko Ko", "305527": "Aye Myat Mon-4",
     "306432": "Ei Pwint Phyu-2", "306564": "Thin Thin Nwe-3", "307381": "Ye Myat Thu",
@@ -30,69 +30,66 @@ AGENT_MAP = {
     "312572": "Pyae Sone Thar", "312573": "Thida Khaing-3", "312579": "Shine Nyi Nyi-2",
     "312597": "Antt Thaw Zin", "312651": "Thiri Moe", "312652": "Han Zar Zar Maw",
     "312734": "Nyan Sin Htet", "312735": "Theint May Thu", "310080": "Htet Wai Phyo",
-    "312892": "May Moe", "312899": "Sai Wai Yan Htun", "312900": "Saw Nandar Hlaing",
-    "313015": "Myint Moe Aung", "313059": "Si Thu Aung-20", "313061": "May Myint Mo",
-    "313143": "Saw Htet Lin", "313264": "Thu Zar Htet-2", "313318": "Oakkar Oo",
-    "313078": "Nyan Lin Htet-10", "313360": "Oakkar Oo-2", "313407": "Lu Maw Hein",
-    "313463": "Ei Thet Mon-2", "313464": "Ei Thazin Phyu", "313519": "Htun Zar Ni Kyaw",
-    "313581": "Kyaw Moe Aung-2", "313602": "Thet Lone Pone-2", "313603": "May Thu Htun-5",
-    "313604": "Thet Hmue Khin", "313646": "Htoo Peti Lwin", "313647": "Hla Moe",
-    "313648": "Phyoe Zin Oo", "313649": "Nwe Ni Soe", "313655": "Aung Sip Paing",
-    "313670": "Thin Pwint San", "313674": "Lai Hnin Hlaing", "313675": "Htay Htay Aung-2",
-    "313676": "Htun Ka Htaty", "313677": "Thin Thi Han", "313784": "Min Khant Kyaw-22",
-    "313785": "Kaung Satt"
+    "312892": "May Moe", "312900": "Saw Nandar Hlaing", "313015": "Myint Moe Aung",
+    "313059": "Si Thu Aung-20", "313061": "May Myint Mo", "313143": "Saw Htet Lin",
+    "313264": "Thu Zar Htet-2", "313318": "Oakkar Oo", "313078": "Nyan Lin Htet-10",
+    "313360": "Oakkar Oo-2", "313407": "Lu Maw Hein", "313463": "Ei Thet Mon-2",
+    "313464": "Ei Thazin Phyu", "313519": "Htun Zar Ni Kyaw", "313581": "Kyaw Moe Aung-2",
+    "313602": "Thet Lone Pone-2", "313603": "May Thu Htun-5", "313604": "Thet Hmue Khin",
+    "313646": "Htoo Peti Lwin", "313647": "Hla Moe", "313648": "Phyoe Zin Oo",
+    "313649": "Nwe Ni Soe", "313655": "Aung Sip Paing", "313670": "Thin Pwint San",
+    "313674": "Lai Hnin Hlaing", "313675": "Htay Htay Aung-2", "313676": "Htun Ka Htaty",
+    "313677": "Thin Thi Han", "313784": "Min Khant Kyaw-22", "313785": "Kaung Satt"
 }
 
-# ၃။ Password စနစ်
+# ၃။ Password System
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
 if not st.session_state.logged_in:
     st.title("🔐 Agent Dashboard Login")
     pwd = st.text_input("Password ရိုက်ထည့်ပါ", type="password")
-    if st.button("Access"):
+    if st.button("ဝင်မည်"):
         if pwd == "12345":
             st.session_state.logged_in = True
             st.rerun()
         else:
-            st.error("❌ Password မှားနေပါတယ်။")
+            st.error("❌ Password မှားနေပါတယ်")
 else:
-    # ၄။ ပင်မ Dashboard အပိုင်း
+    # ၄။ Main Dashboard
     st.title("📊 Agent Pause Time Summary")
     
-    file = st.file_uploader("CSV ဖိုင်တင်ရန် (Upload)", type=["csv"])
+    file = st.file_uploader("CSV ဖိုင်တင်ပါ", type=["csv"])
     
     if file:
         df = pd.read_csv(file)
         
-        # Agent ID ကို Agent Name အဖြစ် ပြောင်းလဲပေးခြင်း
+        # ID ကို နာမည်ပြောင်းခြင်း
         if 'Agent ID' in df.columns:
-            df['Agent Name'] = df['Agent ID'].astype(str).map(AGENT_MAP).fillna("Unknown ID")
+            df['Agent Name'] = df['Agent ID'].astype(str).map(AGENT_MAP).fillna("Unknown")
         
-        # လိုချင်တဲ့ Column နှစ်ခုပဲ ရွေးထုတ်ခြင်း
-        cols_to_show = []
-        if 'Agent Name' in df.columns: cols_to_show.append('Agent Name')
-        if 'Pause Time' in df.columns: cols_to_show.append('Pause Time')
+        # Agent Name နဲ့ Pause Time ကိုပဲ သီးသန့်ထုတ်ခြင်း
+        display_cols = []
+        if 'Agent Name' in df.columns: display_cols.append('Agent Name')
+        if 'Pause Time' in df.columns: display_cols.append('Pause Time')
         
-        # အချက်အလက်များကို ဇယားထုတ်ခြင်း
-        final_df = df[cols_to_show]
+        final_df = df[display_cols]
 
         # ၅။ Chart ပြသခြင်း
         if 'Pause Time' in final_df.columns:
             st.subheader("Chart View")
+            # Agent Name နဲ့ Pause Time ကိုပဲ သုံးထားပါတယ်
             fig = px.bar(final_df, x='Agent Name', y='Pause Time', 
-                         color='Agent Name', text_auto=True,
-                         title="Pause Time (Minutes) per Agent")
+                         color='Agent Name', text_auto=True)
             st.plotly_chart(fig, use_container_width=True)
             
-            # စုစုပေါင်း Pause Time ကို တွက်ပြခြင်း
             total_time = final_df['Pause Time'].sum()
             st.success(f"စုစုပေါင်း Pause Time အားလုံး: **{total_time}** မိနစ်")
 
         st.divider()
         
-        # ၆။ ဇယားကွက် (Table) အနေဖြင့်ပြခြင်း
-        st.subheader("📋 Data Table")
+        # ၆။ Data Table
+        st.subheader("📋 Summary Table")
         st.dataframe(final_df, use_container_width=True)
     else:
-        st.info("👋 CSV ဖိုင်လေး အရင်တင်ပေးပါခင်ဗျာ။")
+        st.info("👋 CSV ဖိုင်တင်ပေးဖို့ စောင့်နေပါတယ်ဗျ။")
