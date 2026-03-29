@@ -5,7 +5,7 @@ import plotly.express as px
 # 1. Page Configuration
 st.set_page_config(page_title="Po Po Dashboard", layout="wide")
 
-# 2. Login Security
+# 2. Simplified Login Security
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
@@ -23,7 +23,7 @@ else:
     st.title("📊 Po Po Dashboard - WPS & Excel Support")
     
     st.sidebar.header("Data Control Center")
-    # WPS Spreadsheets အများစုသုံးတဲ့ format အားလုံးကို လက်ခံရန် ပြင်ဆင်ထားပါတယ်
+    # CSV, XLSX, XLS, XLSM အကုန်ဖတ်နိုင်အောင် လုပ်ထားပါတယ်
     file = st.sidebar.file_uploader("Upload WPS or Excel File", type=["csv", "xlsx", "xls", "xlsm"])
     
     if file:
@@ -32,8 +32,8 @@ else:
             if file.name.endswith('.csv'):
                 df = pd.read_csv(file)
             else:
-                # WPS xlsx/xls ဖိုင်များကို engine='openpyxl' ဖြင့် ဖတ်ခြင်း
-                df = pd.read_excel(file, engine='openpyxl')
+                # Excel ဖိုင်များအတွက် openpyxl ကို အသုံးပြုခြင်း
+                df = pd.read_excel(file)
             
             # ကိန်းဂဏန်း (Numbers) နဲ့ စာသား (Text) Column များကို ခွဲခြားခြင်း
             num_cols = df.select_dtypes(include=['number']).columns.tolist()
@@ -41,15 +41,14 @@ else:
 
             if len(num_cols) > 0 and len(text_cols) > 0:
                 st.sidebar.subheader("Visualization Settings")
-                x_axis = st.sidebar.selectbox("Category (e.g. Agent Name)", text_cols)
-                y_axis = st.sidebar.selectbox("Value (e.g. Pause Time)", num_cols)
+                x_axis = st.sidebar.selectbox("Choose Category (Names/ID)", text_cols)
+                y_axis = st.sidebar.selectbox("Choose Value (Pause Time/Amount)", num_cols)
                 
-                chart_selection = st.sidebar.radio("Select Chart Style", 
-                                                 ["Bar Chart", "Pie Chart", "Line Chart", "Area Chart", "Scatter Plot"])
+                chart_selection = st.sidebar.radio("Select Chart Style", ["Bar Chart", "Pie Chart", "Line Chart", "Area Chart"])
 
                 st.divider()
 
-                # 4. Chart Display
+                # 4. Chart Display Section
                 st.subheader(f"📈 {chart_selection}: {y_axis} vs {x_axis}")
                 
                 if chart_selection == "Bar Chart":
@@ -60,26 +59,23 @@ else:
                     fig = px.line(df, x=x_axis, y=y_axis, markers=True, template="plotly_dark")
                 elif chart_selection == "Area Chart":
                     fig = px.area(df, x=x_axis, y=y_axis, template="plotly_dark")
-                elif chart_selection == "Scatter Plot":
-                    fig = px.scatter(df, x=x_axis, y=y_axis, size=y_axis, color=x_axis, template="plotly_dark")
 
                 st.plotly_chart(fig, use_container_width=True)
 
-                # Metrics Summary
+                # Metrics
                 st.markdown("### 📌 Statistics")
-                m1, m2, m3 = st.columns(3)
+                m1, m2 = st.columns(2)
                 m1.metric("Total Rows", len(df))
                 m2.metric(f"Total {y_axis}", f"{df[y_axis].sum():,.0f}")
-                m3.metric(f"Average {y_axis}", f"{df[y_axis].mean():,.2f}")
 
             else:
-                st.warning("Ensure your WPS file has at least one Text column and one Numeric column.")
+                st.warning("Ensure your file has at least one text column and one numeric column.")
 
             st.divider()
-            st.subheader("📋 Data Preview")
+            st.subheader("📋 Raw Data Table")
             st.dataframe(df, use_container_width=True)
 
         except Exception as e:
-            st.error(f"Error reading WPS/Excel file: {e}")
+            st.error(f"Error reading file: {e}")
     else:
-        st.info("👋 Ready to analyze! Please upload your WPS (.xlsx) or CSV file.")
+        st.info("👋 Ready to analyze! Please upload your file from the sidebar.")
