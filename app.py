@@ -13,7 +13,7 @@ def check_password():
     st.title("🔐 My Private Dashboard")
     password = st.text_input("Password ရိုက်ထည့်ပါ", type="password")
     if st.button("Login"):
-        if password == "12345":
+        if password == "popoaung#99999999":
             st.session_state.password_correct = True
             st.rerun()
         else:
