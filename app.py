@@ -2,19 +2,19 @@ import streamlit as st
 import pandas as pd
 from io import BytesIO
 
-# --- 1. Page Configuration ---
-st.set_page_config(page_title="Data Analysis Dashboard", layout="wide")
+# --- Page Setup ---
+st.set_page_config(page_title="Pause Time Dashboard", layout="wide")
 
-# --- 2. CSS Styling (HTML ထဲကအတိုင်း အရောင်လေးတွေပါအောင်) ---
+# --- CSS for Image-like Table Styling ---
 st.markdown("""
     <style>
-    .report-header { color: #1a73e8; border-bottom: 2px solid #3498db; padding-bottom: 5px; margin-top: 30px; font-size: 24px; font-weight: bold; text-align: center; }
-    .pause-val { color: #d93025; font-weight: bold; }
-    .setup-section { background: #e8f0fe; padding: 15px; border-radius: 8px; border: 1px solid #1a73e8; margin-bottom: 20px; }
+    .report-header { color: #1a73e8; font-size: 24px; font-weight: bold; text-align: center; margin-bottom: 20px; }
+    .pause-red { color: #d93025; font-weight: bold; }
+    .zero-pause { color: #d93025; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- 3. Initial Agent Data (HTML ထဲက Agent List အားလုံး) ---
+# --- Agent Map Data ---
 if 'agent_map' not in st.session_state:
     st.session_state.agent_map = {
         "301246": "Thae Su Myat Noe", "304558": "Phyo Ko Ko", "305527": "Aye Myat Mon-4",
@@ -53,80 +53,57 @@ if 'agent_map' not in st.session_state:
         "313785": "Kaung Satt"
     }
 
-# --- 4. Sidebar ---
+# --- Sidebar ---
 with st.sidebar:
     st.title("📌 Main Menu")
-    choice = st.radio("Reports", ["Pre-Order (R1-R3)", "Call Log & Tickets (R4-R6)", "Pause Time Analysis"])
+    choice = st.radio("Reports", ["Pre-Order (R1-R3)", "Pause Time Analysis"])
 
-# --- 5. Pause Time Analysis Logic ---
+# --- Pause Time Analysis ---
 if choice == "Pause Time Analysis":
-    st.markdown('<div class="report-header">⏱️ Agent Pause Time Analysis</div>', unsafe_allow_html=True)
+    st.markdown('<div class="report-header">Agent Pause Time Report</div>', unsafe_allow_html=True)
     
-    # Setup Section: Update Agent List
-    st.markdown('<div class="setup-section"><b>၁။ Agent List အသစ်များကို ဤနေရာတွင် ထည့်ပါ</b><br><small>ပုံစံ- ID [Space] Name (ဥပမာ- 313786 Kyaw Kyaw)</small></div>', unsafe_allow_html=True)
-    new_agents_input = st.text_area("Update Agent List", height=100, placeholder="313786 Kyaw Kyaw\n313787 Ma Ma", label_visibility="collapsed")
-    
-    if st.button("Update Agent List"):
-        lines = [line.strip() for line in new_agents_input.split('\n') if line.strip()]
-        update_count = 0
-        for line in lines:
-            parts = line.split(None, 1) # ID နဲ့ Name ကိုခွဲခြင်း
-            if len(parts) >= 2:
-                st.session_state.agent_map[parts[0]] = parts[1]
-                update_count += 1
-        st.success(f"{update_count} Agents updated successfully!")
-
-    st.markdown("---")
-
-    # File Upload Section
-    st.markdown("<b>၂။ File တင်ပါ</b>", unsafe_allow_html=True)
-    f_pause = st.file_uploader("Upload Excel/CSV", type=["csv", "xlsx", "xls"], label_visibility="collapsed")
+    f_pause = st.file_uploader("Upload Agent CSV/Excel", type=["csv", "xlsx"])
 
     if f_pause:
-        # File ဖတ်ခြင်း (CSV သို့မဟုတ် Excel)
+        # File Loading
         if f_pause.name.endswith('.csv'):
             df = pd.read_csv(f_pause, encoding='latin-1')
         else:
             df = pd.read_excel(f_pause)
 
-        df.columns = df.columns.str.strip() # Column နာမည်များ ရှင်းလင်းရေး
-
-        # HTML Logic အတိုင်း Agent ID မှ Name သို့ ပြောင်းခြင်း
-        # Column နာမည်ကို Agent ID ပါသော column ကိုရှာပါ
+        # Basic Cleanup
+        df.columns = df.columns.str.strip()
         id_col = next((c for c in df.columns if 'Agent' in c), None)
         pause_col = 'Pause Time'
 
         if id_col and pause_col in df.columns:
-            # ID များကို String ပြောင်းပြီး Name ဖြင့် Map လုပ်ခြင်း
+            # Mapping Names
             df['Agent Name'] = df[id_col].astype(str).str.strip().map(st.session_state.agent_map).fillna("Unknown Agent")
             
-            # Sort by Pause Time (အများဆုံးမှ အနည်းဆုံး)
-            df = df.sort_values(by=pause_col, ascending=False)
-
-            # Display Result
-            st.subheader("📊 Pause Time Report (Sorted by Time)")
+            # Data Formatting
+            df[pause_col] = df[pause_col].fillna("00:00:00")
             
-            # ဇယားကို အရောင်နဲ့ပြရန် (Pause Time ကို အနီရောင်ပြောင်းရန်)
-            styled_df = df[[id_col, 'Agent Name', pause_col]].copy()
-            st.dataframe(styled_df, use_container_width=True, hide_index=True)
+            # ခွဲခြားခြင်း (Pause Time ရှိသူ နှင့် မရှိသူ)
+            has_pause = df[df[pause_col] != "00:00:00"].sort_values(by=pause_col, ascending=False)
+            no_pause = df[df[pause_col] == "00:00:00"]
 
-            # Download Excel Function
-            output = BytesIO()
-            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                styled_df.to_excel(writer, index=False, sheet_name='Pause_Report')
-            st.download_button(
-                label="📥 Download Excel Report",
-                data=output.getvalue(),
-                file_name="Agent_Pause_Report.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
+            # Displaying in Two Columns like image_79799f
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.markdown("### Pause Time ရှိသူများ")
+                # Table with red text for time
+                st.dataframe(
+                    has_pause[['Agent Name', pause_col]].style.map(lambda x: "color: #d93025; font-weight: bold;", subset=[pause_col]),
+                    use_container_width=True, hide_index=True
+                )
+
+            with col2:
+                st.markdown("### Pause Time မရှိသူများ")
+                # Table with red text for 00:00:00
+                st.dataframe(
+                    no_pause[['Agent Name', pause_col]].style.map(lambda x: "color: #d93025;", subset=[pause_col]),
+                    use_container_width=True, hide_index=True
+                )
         else:
-            st.error(f"Error: ဖိုင်ထဲတွင် '{pause_col}' column မတွေ့ပါ။")
-
-# --- 6. Other Reports (အရင်အတိုင်း) ---
-elif choice == "Pre-Order (R1-R3)":
-    # (အရင်က အောင်မြင်သွားတဲ့ Pre-order code များကို ဒီမှာ ဆက်ထားပါ)
-    st.info("Pre-Order Report Menu (R1-R3) အလုပ်လုပ်နေပါပြီ။")
-
-elif choice == "Call Log & Tickets (R4-R6)":
-    st.info("Call Log & Tickets Menu (R4-R6) အလုပ်လုပ်နေပါပြီ။")
+            st.error("လိုအပ်သော Column များ မတွေ့ပါ။")
