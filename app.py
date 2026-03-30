@@ -1,76 +1,71 @@
 import streamlit as st
 import pandas as pd
 
-# 1. Page Configuration (ဒီနေရာကနေ အစပြုပါ)
+# 1. Page Configuration
 st.set_page_config(page_title="Po Po Data Dashboard", layout="wide")
 
-# --- UI Design ပြင်ဆင်ခြင်း (အဖြူရောင်အကွက်များ မဖြစ်စေရန်) ---
-st.markdown("""
-    <style>
-    /* Box များအားလုံးကို အရောင်ရင့်ရင့်ဖြင့် မြင်သာအောင်လုပ်ခြင်း */
-    .stAlert { background-color: #f0f2f6; color: #31333F; }
-    .upload-text {
-        font-size: 18px;
-        font-weight: bold;
-        color: #1a73e8;
-        margin-bottom: 10px;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-# --- Agent Database ---
+# --- Agent Database (Mapping) ---
 if 'agent_map' not in st.session_state:
     st.session_state.agent_map = {
         "301246": "Thae Su Myat Noe", "304558": "Phyo Ko Ko", "305527": "Aye Myat Mon-4",
-        "313820": "Agent Name 313820", "304539": "Agent Name 304539", "313674": "Lai Hnin Hlaing"
+        "306432": "Ei Pwint Phyu-2", "306564": "Thin Thin Nwe-3", "307381": "Ye Myat Thu",
+        "307832": "Hnin Aye Soe", "308059": "Nyo Nyo Tun Lwin", "313820": "Agent Name 313820",
+        "304539": "Agent Name 304539", "313674": "Lai Hnin Hlaing"
     }
 
-# --- Sidebar Menu ---
+def convert_to_hms(total_minutes):
+    if pd.isna(total_minutes): return "00:00:00"
+    total_seconds = int(total_minutes * 60)
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+
+# --- Sidebar Menu (Menu များ ပြန်ခွဲထားသည်) ---
 with st.sidebar:
     st.title("📌 Main Menu")
-    choice = st.radio("သွားလိုသည့် Report ကို ရွေးပါ -", ["Data Analysis Dashboard", "Home"])
+    choice = st.radio("သွားလိုသည့် Report ကို ရွေးပါ -", 
+                      ["Home", "Pre-Order (R1-R3)", "Agent Pause Analysis (R4)", "Ticket Report (R5-R6)"])
 
-# --- Main Dashboard Section ---
-if choice == "Data Analysis Dashboard":
-    st.title("📊 Data Analysis Dashboard")
-    st.write("အောက်ပါ Box များတွင် သက်ဆိုင်ရာ File များကို တင်ပေးပါ -")
+# --- Home Page ---
+if choice == "Home":
+    st.title("🏠 Welcome")
+    st.write("App is running successfully!")
 
-    # Layout ကို ရှင်းရှင်းလင်းလင်းဖြစ်အောင် ကော်လံ ၃ ခု ခွဲလိုက်သည်
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        st.info("📂 File 1: Pre-Order (R1-R3)")
-        file1 = st.file_uploader("Upload R1-R3 File", type=["csv", "xlsx"], key="f1")
-        
-    with col2:
-        st.info("⏱️ File 2: IVR Call Log (R4)")
-        file2 = st.file_uploader("Upload R4 File", type=["csv"], key="f2")
-        
-    with col3:
-        st.success("🎫 File 3: Ticket Report (R5-R6)")
-        file3 = st.file_uploader("Upload R5-R6 File", type=["csv", "xlsx"], key="f3")
-
-    st.divider()
-
-    # --- Pre-Order (R3) Logic ---
+# --- Pre-Order (R1-R3) ---
+elif choice == "Pre-Order (R1-R3)":
+    st.title("📁 Pre-Order Report Analysis")
+    file1 = st.file_uploader("Upload Pre-Order File", type=["csv", "xlsx"])
     if file1:
-        st.subheader("🔍 Report 3: Manual Case ID Search")
-        df1 = pd.read_csv(file1, encoding='latin-1') if file1.name.endswith('.csv') else pd.read_excel(file1)
-        case_input = st.text_area("Case ID များကို ဤနေရာတွင် ရိုက်ထည့်ပါ -", height=100)
-        if st.button("ရှာဖွေမည်"):
-            # Search Logic အပြည့်အစုံ
-            st.success("Data ရှာဖွေပြီးပါပြီ။")
+        st.success("File တင်ပြီးပါပြီ။")
+        # R1-R3 Logic များ ဤနေရာတွင် ရှိသည်
 
-    # --- Agent Pause (R4) Logic ---
-    if file2:
-        st.subheader("⏱️ Report 4: Agent Pause Analysis")
-        df2 = pd.read_csv(file2, encoding='latin-1')
-        df2.columns = df2.columns.str.strip()
-        if 'Agent' in df2.columns:
-            df2['Agent'] = df2['Agent'].astype(str).str.replace('Agent/', '', regex=False).str.strip()
-            # Mapping Logic
-            st.write("Agent Data များကို တွက်ချက်နေပါသည်...")
+# --- Agent Pause Analysis (R4) --- (ဒီ Menu ပြန်ပေါ်လာပါပြီ)
+elif choice == "Agent Pause Analysis (R4)":
+    st.title("⏱️ Agent Pause Time Analysis")
+    agent_file = st.file_uploader("Agent CSV File ကို တင်ပါ", type=["csv"])
+    
+    if agent_file:
+        df = pd.read_csv(agent_file, encoding='latin-1')
+        df.columns = df.columns.str.strip() # Column space သန့်စင်ခြင်း
+        
+        if 'Agent' in df.columns and 'Pause Time' in df.columns:
+            # Agent ID သန့်စင်ခြင်း (Unknown မဖြစ်အောင်)
+            df['Agent'] = df['Agent'].astype(str).str.replace('Agent/', '', regex=False).str.strip()
+            
+            # Pause Time ကို Number ပြောင်းခြင်း
+            df['Pause Time'] = pd.to_numeric(df['Pause Time'], errors='coerce').fillna(0)
+            
+            summary = df.groupby('Agent')['Pause Time'].sum().reset_index()
+            summary['Agent Name'] = summary['Agent'].map(st.session_state.agent_map).fillna("Unknown Agent")
+            summary['Formatted Time'] = summary['Pause Time'].apply(convert_to_hms)
+            
+            st.subheader("Summary Table")
+            st.dataframe(summary[['Agent', 'Agent Name', 'Formatted Time']].sort_values(by='Agent'), use_container_width=True)
+            st.bar_chart(data=summary, x='Agent Name', y='Pause Time')
+        else:
+            st.error("Column 'Agent' သို့မဟုတ် 'Pause Time' ကို ရှာမတွေ့ပါ။")
 
-else:
-    st.title("🏠 Home")
-    st.write("App ကို အောင်မြင်စွာ Run နေပါပြီ။")
+# --- Ticket Report (R5-R6) ---
+elif choice == "Ticket Report (R5-R6)":
+    st.title("🎫 Ticket Report Analysis")
+    file3 = st.file_uploader("Upload Ticket File", type=["csv", "xlsx"])
