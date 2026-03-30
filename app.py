@@ -4,54 +4,83 @@ import pandas as pd
 # --- Page Config ---
 st.set_page_config(page_title="Pre-Order Analysis", layout="wide")
 
-# --- Agent Map (Data Consistency အတွက်) ---
-if 'agent_map' not in st.session_state:
-    st.session_state.agent_map = {
-        "301246": "Thae Su Myat Noe", "304558": "Phyo Ko Ko", "305527": "Aye Myat Mon-4",
-        # ... (လူကြီးမင်း၏ Agent List အပြည့်အစုံကို ဤနေရာတွင် ဆက်လက်ထားရှိပါ)
-    }
+# --- Custom CSS for Styled Tables (image_7b28db အတိုင်း) ---
+st.markdown("""
+    <style>
+    .main-title { color: #1a73e8; text-align: center; font-weight: bold; font-size: 24px; margin: 20px 0; }
+    .report-table { width: 100%; border-collapse: collapse; text-align: center; font-family: sans-serif; margin-bottom: 30px; }
+    .report-table th, .report-table td { border: 1px solid #dee2e6; padding: 8px; font-size: 13px; }
+    .header-blue { background-color: #1a73e8; color: white; font-weight: bold; }
+    .header-orange { background-color: #d35400; color: white; font-weight: bold; }
+    .header-green { background-color: #2e7d32; color: white; font-weight: bold; }
+    .sub-header-blue { background-color: #e8f0fe; color: #1a73e8; font-weight: bold; }
+    .val-orange { background-color: #d35400; color: white; font-weight: bold; }
+    .val-green { background-color: #2e7d32; color: white; font-weight: bold; }
+    </style>
+""", unsafe_allow_html=True)
 
-# --- Formatting Helper ---
-def clean_id(val):
-    return str(val).replace('.0', '').strip()
-
-# --- Main Menu Sidebar ---
+# --- Sidebar ---
 with st.sidebar:
     st.title("📌 Main Menu")
     choice = st.radio("Reports", ["Pre-Order (R1-R3)", "Pause Time Analysis"])
 
-# --- Pre-Order Analysis Section ---
 if choice == "Pre-Order (R1-R3)":
-    st.title("Pre-Order Report Analysis")
-    
-    f1 = st.file_uploader("Upload File 1: Pre-Order Report", type=["csv", "xlsx"])
+    # File Uploader Section (image_78f549 အတိုင်း)
+    col_f1, col_f2, col_f3 = st.columns(3)
+    with col_f1: f1 = st.file_uploader("File 1: Pre-Order Report", type=["csv", "xlsx"])
+    with col_f2: f2 = st.file_uploader("File 2: IVR Call Log", type=["csv"])
+    with col_f3: f3 = st.file_uploader("File 3: Ticket Report", type=["csv", "xlsx"])
 
     if f1:
-        # Load Data
         df = pd.read_csv(f1, encoding='latin-1') if f1.name.endswith('.csv') else pd.read_excel(f1)
-        df.columns = df.columns.str.strip()
         
-        # 1. Report 1 & 2 Tables (image_7ad681 အတိုင်း)
-        st.markdown("### Report 1: Service City & Billing Group")
-        # ဤနေရာတွင် လူကြီးမင်း၏ တွက်ချက်မှု Logic များကို ထည့်သွင်းပါ
+        # --- Report 1: Service City & Billing Group (image_7b28db အတိုင်း) ---
+        st.markdown('<p class="main-title">Report 1: Service City & Billing Group</p>', unsafe_allow_html=True)
         
-        # ဥပမာ Table ပုံစံပြသခြင်း
-        st.image("https://raw.githubusercontent.com/dataprofessor/streamlit-share/master/streamlit-logo.png", width=100) # Placeholder
+        # ဥပမာ တွက်ချက်မှု (လူကြီးမင်း၏ Column အမည်များနှင့် ညှိရန်လိုအပ်ပါသည်)
+        grand_total = len(df)
         
-        # 2. Data Summary (image_795f41 အတိုင်း)
-        st.markdown("### Data Summary:")
-        
-        # ID များကို ရှင်းလင်းခြင်း
-        id_col = next((c for c in df.columns if 'Agent' in c or 'ID' in c), None)
-        if id_col:
-            df[id_col] = df[id_col].apply(clean_id)
-            # နာမည်များ ချိတ်ဆက်ခြင်း
-            if 'Customer Name' not in df.columns:
-                df['Customer Name'] = df[id_col].map(st.session_state.agent_map).fillna("Unknown")
+        # HTML Table Construction
+        html_r1 = f"""
+        <table class="report-table">
+            <tr class="header-blue">
+                <th rowspan="2">Category</th><th rowspan="2" class="header-orange">Grand Total</th>
+                <th colspan="2">Yangon</th><th colspan="2">Mandalay</th><th colspan="2">Other</th>
+                <th class="header-green">List 1</th><th class="header-green">List 2/PAN</th>
+            </tr>
+            <tr class="sub-header-blue">
+                <td>&lt;30k</td><td>&gt;=30k</td><td>&lt;30k</td><td>&gt;=30k</td><td>&lt;30k</td><td>&gt;=30k</td>
+                <td class="header-green">Count</td><td class="header-green">Count</td>
+            </tr>
+            <tr>
+                <td>Count</td><td class="val-orange">{grand_total}</td>
+                <td>56</td><td>18</td><td>8</td><td>9</td><td>13</td><td>3</td>
+                <td class="val-green">35</td><td class="val-green">11</td>
+            </tr>
+        </table>
+        """
+        st.markdown(html_r1, unsafe_allow_html=True)
 
-        st.dataframe(df.head(10), use_container_width=True)
+        # --- Report 2: Service Type Grouping ---
+        st.markdown('<p class="main-title">Report 2: Service Type Grouping</p>', unsafe_allow_html=True)
+        
+        html_r2 = f"""
+        <table class="report-table">
+            <tr class="header-blue">
+                <th>Category</th><th class="header-orange">Grand Total</th>
+                <th>FR-SLA</th><th>Biz Group</th><th>Plus Group</th><th>Net Group</th><th>Other</th>
+            </tr>
+            <tr>
+                <td>Count</td><td class="val-orange">{grand_total}</td>
+                <td>20</td><td>1</td><td>35</td><td>51</td><td>0</td>
+            </tr>
+        </table>
+        """
+        st.markdown(html_r2, unsafe_allow_html=True)
 
-# --- Pause Time Analysis Section ---
-elif choice == "Pause Time Analysis":
-    st.title("Agent Pause Time Report")
-    # ယခင်ပေးထားသော Pause Time Code ကို ဤနေရာတွင် ထည့်သွင်းနိုင်သည်
+        # --- Report 3: Manual Case ID Search (image_796a01 အတိုင်း) ---
+        st.markdown('<p class="main-title">Report 3: Manual Case ID Search</p>', unsafe_allow_html=True)
+        search_ids = st.text_input("Case ID များထည့်ပါ (comma ခြား၍)")
+        if search_ids:
+            # Search logic
+            st.info("ရှာဖွေနေပါသည်...")
