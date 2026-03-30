@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-# 1. Page Configuration (အပေါ်ဆုံးမှာ ထားရပါမည်)
+# 1. Page Config (အပေါ်ဆုံးမှာ ထားရပါမည်)
 st.set_page_config(page_title="Data Analysis Dashboard", layout="wide")
 
 # 2. Sidebar Menu ပြန်ဖော်ခြင်း
@@ -9,7 +9,7 @@ with st.sidebar:
     st.title("📌 Main Menu")
     app_mode = st.radio("Reports ရွေးချယ်ရန်", ["Pre-Order (R1-R3)", "Call Log & Tickets (R4-R6)"])
 
-# 3. CSS Styling (အရောင်နှင့် ဇယားပုံစံများ - image_7ad681 အတိုင်း)
+# 3. CSS Styling (ပုံထဲကအတိုင်း အရောင်များ သတ်မှတ်ခြင်း)
 st.markdown("""
 <style>
     .report-table { width: 100%; border-collapse: collapse; text-align: center; font-family: sans-serif; }
@@ -21,13 +21,12 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 4. Error-Free Data Loading Function (ValueError နှင့် Unicode Error ကာကွယ်ရန်)
+# 4. Error-Free Data Loading (CSV/Excel ခွဲခြားဖတ်ရန်)
 def load_data(file):
     if file is None: return None
     try:
-        # ဖိုင်အမျိုးအစားကို အလိုအလျောက်ခွဲခြားခြင်း
         if file.name.lower().endswith('.csv'):
-            # Encoding မျိုးစုံဖြင့် စမ်းဖတ်ခြင်း (WPS/Excel CSV အတွက်)
+            # Encoding မျိုးစုံဖြင့် စမ်းဖတ်ခြင်း
             for enc in ['utf-8-sig', 'latin-1', 'cp1252']:
                 try:
                     return pd.read_csv(file, encoding=enc)
@@ -36,13 +35,12 @@ def load_data(file):
         else:
             return pd.read_excel(file)
     except Exception as e:
-        st.error(f"Error: {e}")
+        st.error(f"Error loading file: {e}")
         return None
 
-# 5. Main Dashboard Header
+# 5. Dashboard UI
 st.title("📊 Data Analysis Report")
 
-# Upload Boxes ၃ ခု (image_7b30d8 အတိုင်း)
 col1, col2, col3 = st.columns(3)
 with col1: f1 = st.file_uploader("File 1: Pre-Order Report", type=["csv", "xlsx"])
 with col2: f2 = st.file_uploader("File 2: IVR Call Log", type=["csv"])
@@ -53,7 +51,7 @@ if app_mode == "Pre-Order (R1-R3)":
     if df is not None:
         st.success("File 1 Uploaded!")
         
-        # Report 1 (image_7ad681 ပုံစံအတိုင်း)
+        # Report 1 (image_869fe9 အတိုင်း)
         total_count = len(df)
         html_r1 = f"""
         <h3 style="color: #1a73e8; text-align: center;">Report 1: Service City & Billing Group</h3>
@@ -79,7 +77,7 @@ if app_mode == "Pre-Order (R1-R3)":
         </table>
         """
         st.markdown(html_r1, unsafe_allow_html=True)
-        
+
         # Report 2
         st.markdown("<br>", unsafe_allow_html=True)
         html_r2 = f"""
@@ -99,7 +97,7 @@ if app_mode == "Pre-Order (R1-R3)":
 
 elif app_mode == "Call Log & Tickets (R4-R6)":
     st.write("### Pause Time Statistics")
-    # ပုံထဲကအတိုင်း Pause Time ဇယားနှစ်ခု ပြသခြင်း
-    col_left, col_right = st.columns(2)
-    with col_left: st.write("**Pause Time ရှိသူများ**")
-    with col_right: st.write("**Pause Time မရှိသူများ**")
+    # ပုံထဲကအတိုင်း Pause Time ဇယားများ ပြသခြင်း
+    c1, c2 = st.columns(2)
+    with c1: st.write("**Pause Time ရှိသူများ**")
+    with c2: st.write("**Pause Time မရှိသူများ**")
