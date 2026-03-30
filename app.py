@@ -4,7 +4,7 @@ import pandas as pd
 # 1. Page Configuration
 st.set_page_config(page_title="Po Po Data Dashboard", layout="wide")
 
-# --- Agent Database ---
+# --- Agent Database (လူကြီးမင်းပေးထားသော List) ---
 if 'agent_map' not in st.session_state:
     st.session_state.agent_map = {
         "301246": "Thae Su Myat Noe", "304558": "Phyo Ko Ko", "305527": "Aye Myat Mon-4",
@@ -50,47 +50,86 @@ def convert_to_hms(total_minutes):
     minutes, seconds = divmod(remainder, 60)
     return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
-# --- Sidebar ---
+# --- Sidebar Menu ---
 with st.sidebar:
     st.title("📌 Main Menu")
     choice = st.radio("သွားလိုသည့် Report ကို ရွေးပါ -", ["Home", "Pre-Order (R1-R3)", "Agent Pause Analysis (R4)"])
 
-# --- Agent Pause Analysis (R4) ---
-if choice == "Agent Pause Analysis (R4)":
-    st.title("⏱️ Agent Pause Time Analysis")
+# --- Home Page ---
+if choice == "Home":
+    st.title("🏠 Welcome")
+    st.write("App is running successfully!")
+    st.info("ဘယ်ဘက် Menu ကနေ စစ်ဆေးလိုတဲ့ Report အမျိုးအစားကို ရွေးချယ်ပေးပါ။")
 
-    agent_file = st.file_uploader("Agent CSV File ကို တင်ပါ", type=["csv"])
+# --- Pre-Order Report (R1-R3) ---
+elif choice == "Pre-Order (R1-R3)":
+    st.title("📁 Pre-Order Report Analysis")
+    
+    # ၁။ File Upload Section
+    col1, col2 = st.columns(2)
+    with col1:
+        preorder_file = st.file_uploader("Pre-Order Report File ကို တင်ပါ", type=["xlsx", "csv", "xls"])
+    
+    if preorder_file:
+        try:
+            # File Type စစ်ဆေးပြီး ဖတ်ခြင်း
+            if preorder_file.name.endswith('.csv'):
+                df = pd.read_csv(preorder_file, encoding='latin-1')
+            else:
+                df = pd.read_excel(preorder_file)
+            
+            st.success(f"File '{preorder_file.name}' ကို ဖတ်လို့ရပါပြီ။")
+            
+            # ၂။ Report Generation Logic (ဥပမာ Report 3: Manual Case ID Search)
+            st.divider()
+            st.subheader("Report 3: Manual Case ID Search")
+            case_ids_input = st.text_area("Case ID များကို ထည့်ပါ (တစ်ကြောင်းချင်းစီ သို့မဟုတ် comma ခြား၍)", placeholder="POI-26-03-XXXX...")
+            
+            if st.button("Generate Report 3"):
+                if case_ids_input:
+                    # Input များကို သန့်စင်ခြင်း
+                    search_list = [x.strip() for x in case_ids_input.replace('\n', ',').split(',') if x.strip()]
+                    # Column ရှာခြင်း (ဥပမာ Case ID column name)
+                    case_col = [col for col in df.columns if 'case' in col.lower() or 'id' in col.lower()]
+                    
+                    if case_col:
+                        result = df[df[case_col[0]].astype(str).isin(search_list)]
+                        st.write(f"ရှာဖွေတွေ့ရှိမှု - {len(result)} ခု")
+                        st.dataframe(result, use_container_width=True)
+                    else:
+                        st.warning("Case ID column ကို ရှာမတွေ့ပါ။")
+                else:
+                    st.error("Case ID တစ်ခုခု အရင်ထည့်ပေးပါ။")
+            
+            # (အခြား Report 1, 2 logic များကိုလည်း ဤနေရာတွင် ထပ်ဖြည့်နိုင်ပါသည်)
+            
+        except Exception as e:
+            st.error(f"Error: {e}")
+    else:
+        st.info("စတင်ရန်အတွက် အပေါ်က 'Browse files' ကနေ Excel/CSV file တစ်ခု အရင်တင်ပေးပါ။")
+
+# --- Agent Pause Analysis (R4) ---
+elif choice == "Agent Pause Analysis (R4)":
+    st.title("⏱️ Agent Pause Time Analysis")
+    agent_file = st.file_uploader("Agent CSV File ကို တင်ပါ", type=["csv"], key="r4_file")
     
     if agent_file:
         df = pd.read_csv(agent_file, encoding='latin-1')
-        
-        # Column အမည်များမှ space များကို ဖယ်ရှားခြင်း
         df.columns = df.columns.str.strip()
         
-        # 'Agent' column နှင့် 'Pause Time' column ရှိမရှိစစ်ဆေးခြင်း
         if 'Agent' in df.columns and 'Pause Time' in df.columns:
-            
-            # --- Image 6e053d logic: 'Agent/' စာသားများကို ဖယ်ထုတ်ခြင်း ---
+            # ID သန့်စင်ခြင်း (Agent/313820 -> 313820)
             df['Agent'] = df['Agent'].astype(str).str.replace('Agent/', '', regex=False).str.strip()
             
-            # Pause Time ကို float သို့ပြောင်းခြင်း
-            if df['Pause Time'].dtype == 'object':
-                df['Pause Time'] = pd.to_numeric(df['Pause Time'], errors='coerce').fillna(0)
+            # Numeric ပြောင်းခြင်း
+            df['Pause Time'] = pd.to_numeric(df['Pause Time'], errors='coerce').fillna(0)
             
-            # Summary တွက်ချက်ခြင်း
             summary = df.groupby('Agent')['Pause Time'].sum().reset_index()
-            
-            # Name Mapping
             summary['Agent Name'] = summary['Agent'].map(st.session_state.agent_map).fillna("Unknown Agent")
-            
-            # HMS format ပြောင်းခြင်း
             summary['Formatted Time'] = summary['Pause Time'].apply(convert_to_hms)
             
-            # ပြသခြင်း
             st.subheader("Summary Table")
-            display_df = summary[['Agent', 'Agent Name', 'Pause Time', 'Formatted Time']].sort_values(by='Pause Time', ascending=False)
-            st.dataframe(display_df, hide_index=True, use_container_width=True)
-            
+            st.dataframe(summary[['Agent', 'Agent Name', 'Formatted Time']].sort_values(by='Agent'), use_container_width=True, hide_index=True)
             st.bar_chart(data=summary, x='Agent Name', y='Pause Time')
         else:
-            st.error(f"လိုအပ်သော Column များ မတွေ့ပါ။ Column အမည်များမှာ- {list(df.columns)} ဖြစ်နေပါသည်။")
+            st.error("လိုအပ်သော Column များ မတွေ့ပါ။")
