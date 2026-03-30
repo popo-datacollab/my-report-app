@@ -6,6 +6,7 @@ st.set_page_config(page_title="Po Po Data Dashboard", layout="wide")
 
 # --- Agent Database (လူကြီးမင်းပေးထားသော List) ---
 if 'agent_map' not in st.session_state:
+    # ID များကို String format ဖြင့်သာ သိမ်းဆည်းထားပါသည်
     st.session_state.agent_map = {
         "301246": "Thae Su Myat Noe", "304558": "Phyo Ko Ko", "305527": "Aye Myat Mon-4",
         "306432": "Ei Pwint Phyu-2", "306564": "Thin Thin Nwe-3", "307381": "Ye Myat Thu",
@@ -54,86 +55,50 @@ def convert_to_hms(total_minutes):
 # --- Sidebar Menu ---
 with st.sidebar:
     st.title("📌 Main Menu")
-    MENU_HOME = "Home"
-    MENU_R1 = "Pre-Order (R1-R3)"
-    MENU_R4 = "Agent Pause Analysis (R4)"
-    choice = st.radio("သွားလိုသည့် Report ကို ရွေးပါ -", [MENU_HOME, MENU_R1, MENU_R4])
-    st.divider()
-    st.info("Po Po Data Dashboard v2.5")
+    choice = st.radio("သွားလိုသည့် Report ကို ရွေးပါ -", ["Home", "Pre-Order (R1-R3)", "Agent Pause Analysis (R4)"])
 
-# --- Home Page ---
-if choice == MENU_HOME:
-    st.title("🏠 Po Po Data Dashboard")
-    st.write("Welcome! အလိုအလျောက် Data Analysis ပြုလုပ်ပေးသော Dashboard ဖြစ်ပါသည်။")
-    
-    # Dashboard ကိန်းဂဏန်းများ
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Status", "Active")
-    c2.metric("Total Agents", len(st.session_state.agent_map))
-    c3.metric("Project", "POI 2026")
-
-# --- Agent Pause Analysis (R4) - Integrated with your Logic ---
-elif choice == MENU_R4:
+# --- Agent Pause Analysis (R4) ---
+if choice == "Agent Pause Analysis (R4)":
     st.title("⏱️ Agent Pause Time Analysis")
 
-    # ၁။ Agent List Update Section
+    # ၁။ Agent List Update (Expander)
     with st.expander("➕ Agent List အသစ်များကို ဤနေရာတွင် ထည့်ပါ"):
-        st.write("ပုံစံ- ID [Space] Name (ဥပမာ- 313786 Kyaw Kyaw)")
-        new_agents_input = st.text_area("Update Agent List", placeholder="313786 Kyaw Kyaw\n313787 Ma Ma", height=100)
-        if st.button("Update Agent Database"):
-            added_count = 0
+        new_agents_input = st.text_area("Update Agent List (ID Name)", height=100)
+        if st.button("Update Database"):
             for line in new_agents_input.split('\n'):
                 parts = line.strip().split()
                 if len(parts) >= 2:
-                    st.session_state.agent_map[parts[0]] = " ".join(parts[1:])
-                    added_count += 1
-            st.success(f"{added_count} agents updated successfully!")
+                    st.session_state.agent_map[str(parts[0])] = " ".join(parts[1:])
+            st.success("Updated!")
 
     # ၂။ File Upload
-    agent_file = st.file_uploader("Agent CSV File ကို တင်ပါ", type=["csv"], key="agent_r4_upload")
+    agent_file = st.file_uploader("Agent CSV File ကို တင်ပါ", type=["csv"])
     
     if agent_file:
-        try:
-            df = pd.read_csv(agent_file, encoding='latin-1')
+        df = pd.read_csv(agent_file, encoding='latin-1')
+        
+        # Column စစ်ဆေးခြင်း
+        target_col = 'Agent' if 'Agent' in df.columns else None
+        if target_col and 'Pause Time' in df.columns:
             
-            # Column ရှာဖွေခြင်း (Agent ID သို့မဟုတ် Agent Name)
-            # လူကြီးမင်း CSV ထဲမှာ 'Agent' လို့ပါတာ သေချာအောင် စစ်ပေးထားပါတယ်
-            col_target = 'Agent' if 'Agent' in df.columns else None
+            # Pause Time ကို မိနစ်ပြောင်းခြင်း
+            if df['Pause Time'].dtype == 'object':
+                df['Pause Time'] = pd.to_timedelta(df['Pause Time']).dt.total_seconds() / 60
             
-            if col_target and 'Pause Time' in df.columns:
-                # Time to Minutes conversion
-                if df['Pause Time'].dtype == 'object':
-                    df['Pause Time'] = pd.to_timedelta(df['Pause Time']).dt.total_seconds() / 60
-                
-                # Group by Agent (ID)
-                summary = df.groupby(col_target)['Pause Time'].sum().reset_index()
-                
-                # Agent ID ကို နာမည်နဲ့တွဲပေးခြင်း
-                summary['Agent Name'] = summary[col_target].astype(str).map(st.session_state.agent_map).fillna("Unknown Agent")
-                
-                # Format to HH:MM:SS
-                summary['Formatted Time'] = summary['Pause Time'].apply(convert_to_hms)
-                
-                # Display Results
-                st.subheader("Agent-wise Pause Report")
-                
-                # Table ပြင်ဆင်ခြင်း
-                display_df = summary[[col_target, 'Agent Name', 'Formatted Time']].sort_values(by='Formatted Time', ascending=False)
-                
-                c1, c2 = st.columns([1.5, 1])
-                with c1:
-                    st.dataframe(display_df, hide_index=True, use_container_width=True)
-                with c2:
-                    st.write("**Top Pauses (Minutes)**")
-                    st.bar_chart(data=summary, x='Agent Name', y='Pause Time')
-            else:
-                st.error("CSV ထဲတွင် 'Agent' နှင့် 'Pause Time' Column အမည်များ မတွေ့ရပါ။")
-        except Exception as e:
-            st.error(f"Error: {e}")
-
-# --- Pre-Order Report (R1-R3) Logic ---
-elif choice == MENU_R1:
-    st.title("📁 Pre-Order Report (R1, R2, R3)")
-    # (လူကြီးမင်းပေးထားသော Pre-Order Logic များ ဤနေရာတွင် ဆက်လက်ရှိနေပါမည်)
-    st.info("File upload တင်ပြီး Report 1, 2, 3 များကို စစ်ဆေးနိုင်ပါသည်။")
-    # ... (ယခင် code အပိုင်းကို ဒီနေရာမှာ ထည့်ထားပေးပါတယ်)
+            # --- အရေးကြီးသောအဆင့်: ID ကို String အဖြစ်ပြောင်းခြင်း ---
+            df[target_col] = df[target_col].astype(str).str.strip()
+            
+            # Grouping
+            summary = df.groupby(target_col)['Pause Time'].sum().reset_index()
+            
+            # Name Mapping
+            summary['Agent Name'] = summary[target_col].map(st.session_state.agent_map).fillna("Unknown Agent")
+            
+            # Time Formatting
+            summary['Formatted Time'] = summary['Pause Time'].apply(convert_to_hms)
+            
+            # Display Result
+            st.dataframe(summary[[target_col, 'Agent Name', 'Formatted Time']].sort_values(by='Pause Time', ascending=False), hide_index=True, use_container_width=True)
+            st.bar_chart(data=summary, x='Agent Name', y='Pause Time')
+        else:
+            st.error("Column 'Agent' or 'Pause Time' not found!")
