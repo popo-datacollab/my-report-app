@@ -4,9 +4,8 @@ import pandas as pd
 # 1. Page Configuration
 st.set_page_config(page_title="Po Po Data Dashboard", layout="wide")
 
-# --- Agent Database (လူကြီးမင်းပေးထားသော List) ---
+# --- Agent Database ---
 if 'agent_map' not in st.session_state:
-    # ID များကို String format ဖြင့်သာ သိမ်းဆည်းထားပါသည်
     st.session_state.agent_map = {
         "301246": "Thae Su Myat Noe", "304558": "Phyo Ko Ko", "305527": "Aye Myat Mon-4",
         "306432": "Ei Pwint Phyu-2", "306564": "Thin Thin Nwe-3", "307381": "Ye Myat Thu",
@@ -44,7 +43,6 @@ if 'agent_map' not in st.session_state:
         "313785": "Kaung Satt"
     }
 
-# --- Helper Functions ---
 def convert_to_hms(total_minutes):
     if pd.isna(total_minutes): return "00:00:00"
     total_seconds = int(total_minutes * 60)
@@ -52,7 +50,7 @@ def convert_to_hms(total_minutes):
     minutes, seconds = divmod(remainder, 60)
     return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
-# --- Sidebar Menu ---
+# --- Sidebar ---
 with st.sidebar:
     st.title("📌 Main Menu")
     choice = st.radio("သွားလိုသည့် Report ကို ရွေးပါ -", ["Home", "Pre-Order (R1-R3)", "Agent Pause Analysis (R4)"])
@@ -61,44 +59,38 @@ with st.sidebar:
 if choice == "Agent Pause Analysis (R4)":
     st.title("⏱️ Agent Pause Time Analysis")
 
-    # ၁။ Agent List Update (Expander)
-    with st.expander("➕ Agent List အသစ်များကို ဤနေရာတွင် ထည့်ပါ"):
-        new_agents_input = st.text_area("Update Agent List (ID Name)", height=100)
-        if st.button("Update Database"):
-            for line in new_agents_input.split('\n'):
-                parts = line.strip().split()
-                if len(parts) >= 2:
-                    st.session_state.agent_map[str(parts[0])] = " ".join(parts[1:])
-            st.success("Updated!")
-
-    # ၂။ File Upload
     agent_file = st.file_uploader("Agent CSV File ကို တင်ပါ", type=["csv"])
     
     if agent_file:
         df = pd.read_csv(agent_file, encoding='latin-1')
         
-        # Column စစ်ဆေးခြင်း
-        target_col = 'Agent' if 'Agent' in df.columns else None
-        if target_col and 'Pause Time' in df.columns:
+        # Column အမည်များမှ space များကို ဖယ်ရှားခြင်း
+        df.columns = df.columns.str.strip()
+        
+        # 'Agent' column နှင့် 'Pause Time' column ရှိမရှိစစ်ဆေးခြင်း
+        if 'Agent' in df.columns and 'Pause Time' in df.columns:
             
-            # Pause Time ကို မိနစ်ပြောင်းခြင်း
+            # --- Image 6e053d logic: 'Agent/' စာသားများကို ဖယ်ထုတ်ခြင်း ---
+            df['Agent'] = df['Agent'].astype(str).str.replace('Agent/', '', regex=False).str.strip()
+            
+            # Pause Time ကို float သို့ပြောင်းခြင်း
             if df['Pause Time'].dtype == 'object':
-                df['Pause Time'] = pd.to_timedelta(df['Pause Time']).dt.total_seconds() / 60
+                df['Pause Time'] = pd.to_numeric(df['Pause Time'], errors='coerce').fillna(0)
             
-            # --- အရေးကြီးသောအဆင့်: ID ကို String အဖြစ်ပြောင်းခြင်း ---
-            df[target_col] = df[target_col].astype(str).str.strip()
-            
-            # Grouping
-            summary = df.groupby(target_col)['Pause Time'].sum().reset_index()
+            # Summary တွက်ချက်ခြင်း
+            summary = df.groupby('Agent')['Pause Time'].sum().reset_index()
             
             # Name Mapping
-            summary['Agent Name'] = summary[target_col].map(st.session_state.agent_map).fillna("Unknown Agent")
+            summary['Agent Name'] = summary['Agent'].map(st.session_state.agent_map).fillna("Unknown Agent")
             
-            # Time Formatting
+            # HMS format ပြောင်းခြင်း
             summary['Formatted Time'] = summary['Pause Time'].apply(convert_to_hms)
             
-            # Display Result
-            st.dataframe(summary[[target_col, 'Agent Name', 'Formatted Time']].sort_values(by='Pause Time', ascending=False), hide_index=True, use_container_width=True)
+            # ပြသခြင်း
+            st.subheader("Summary Table")
+            display_df = summary[['Agent', 'Agent Name', 'Pause Time', 'Formatted Time']].sort_values(by='Pause Time', ascending=False)
+            st.dataframe(display_df, hide_index=True, use_container_width=True)
+            
             st.bar_chart(data=summary, x='Agent Name', y='Pause Time')
         else:
-            st.error("Column 'Agent' or 'Pause Time' not found!")
+            st.error(f"လိုအပ်သော Column များ မတွေ့ပါ။ Column အမည်များမှာ- {list(df.columns)} ဖြစ်နေပါသည်။")
