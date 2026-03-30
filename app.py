@@ -80,4 +80,53 @@ if choice == "Pause Time Analysis":
 
     # File Upload Section
     st.markdown("<b>၂။ File တင်ပါ</b>", unsafe_allow_html=True)
-    f_pause = st.file_uploader("Upload Excel/CSV", type=["csv
+    f_pause = st.file_uploader("Upload Excel/CSV", type=["csv", "xlsx", "xls"], label_visibility="collapsed")
+
+    if f_pause:
+        # File ဖတ်ခြင်း (CSV သို့မဟုတ် Excel)
+        if f_pause.name.endswith('.csv'):
+            df = pd.read_csv(f_pause, encoding='latin-1')
+        else:
+            df = pd.read_excel(f_pause)
+
+        df.columns = df.columns.str.strip() # Column နာမည်များ ရှင်းလင်းရေး
+
+        # HTML Logic အတိုင်း Agent ID မှ Name သို့ ပြောင်းခြင်း
+        # Column နာမည်ကို Agent ID ပါသော column ကိုရှာပါ
+        id_col = next((c for c in df.columns if 'Agent' in c), None)
+        pause_col = 'Pause Time'
+
+        if id_col and pause_col in df.columns:
+            # ID များကို String ပြောင်းပြီး Name ဖြင့် Map လုပ်ခြင်း
+            df['Agent Name'] = df[id_col].astype(str).str.strip().map(st.session_state.agent_map).fillna("Unknown Agent")
+            
+            # Sort by Pause Time (အများဆုံးမှ အနည်းဆုံး)
+            df = df.sort_values(by=pause_col, ascending=False)
+
+            # Display Result
+            st.subheader("📊 Pause Time Report (Sorted by Time)")
+            
+            # ဇယားကို အရောင်နဲ့ပြရန် (Pause Time ကို အနီရောင်ပြောင်းရန်)
+            styled_df = df[[id_col, 'Agent Name', pause_col]].copy()
+            st.dataframe(styled_df, use_container_width=True, hide_index=True)
+
+            # Download Excel Function
+            output = BytesIO()
+            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                styled_df.to_excel(writer, index=False, sheet_name='Pause_Report')
+            st.download_button(
+                label="📥 Download Excel Report",
+                data=output.getvalue(),
+                file_name="Agent_Pause_Report.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+        else:
+            st.error(f"Error: ဖိုင်ထဲတွင် '{pause_col}' column မတွေ့ပါ။")
+
+# --- 6. Other Reports (အရင်အတိုင်း) ---
+elif choice == "Pre-Order (R1-R3)":
+    # (အရင်က အောင်မြင်သွားတဲ့ Pre-order code များကို ဒီမှာ ဆက်ထားပါ)
+    st.info("Pre-Order Report Menu (R1-R3) အလုပ်လုပ်နေပါပြီ။")
+
+elif choice == "Call Log & Tickets (R4-R6)":
+    st.info("Call Log & Tickets Menu (R4-R6) အလုပ်လုပ်နေပါပြီ။")
